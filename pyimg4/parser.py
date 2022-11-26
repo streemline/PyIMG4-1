@@ -132,14 +132,14 @@ class IM4M(_PyIMG4):
         self._parse()
 
     def __repr__(self) -> str:
-        repr_ = f'IM4M('
+        repr_ = 'IM4M('
         for p in ('CHIP', 'ECID'):
             prop = next((prop for prop in self.properties if prop.name == p), None)
 
             if prop is not None:
                 repr_ += f'{prop.name}={prop.value}, '
 
-        return repr_[:-2] + ')' if ',' in repr_ else repr_ + ')'
+        return f'{repr_[:-2]})' if ',' in repr_ else f'{repr_})'
 
     def _parse(self) -> None:
         self._decoder.start(self._data)
@@ -175,10 +175,7 @@ class IM4M(_PyIMG4):
             raise UnexpectedTagError(self._decoder.peek(), asn1.Numbers.Set)
 
         self._decoder.enter()
-        while True:
-            if self._decoder.eof():
-                break
-
+        while not self._decoder.eof():
             data = ManifestImageData(self._decoder.read()[1])
             if data.fourcc == 'MANP':
                 self.properties = data.properties
@@ -368,14 +365,14 @@ class IMG4(_PyIMG4):
 
         self.im4m = IM4M(self._decoder.read()[1])  # IM4M
 
-        if not self._decoder.eof():
-            if self._decoder.peek().cls != asn1.Classes.Context:
-                raise UnexpectedTagError(self._decoder.peek(), asn1.Classes.Context)
-
-            self.im4r = IM4R(self._decoder.read()[1])  # IM4R
-        else:
+        if self._decoder.eof():
             self.im4r = None
 
+        elif self._decoder.peek().cls != asn1.Classes.Context:
+            raise UnexpectedTagError(self._decoder.peek(), asn1.Classes.Context)
+
+        else:
+            self.im4r = IM4R(self._decoder.read()[1])  # IM4R
         if not self._decoder.eof():
             raise ValueError(
                 f'Unexpected data found at end of Image4: {self._decoder.peek().nr.name.upper()}'
@@ -749,7 +746,7 @@ class IM4PData(_PyIMG4):
         if self.compression != Compression.NONE:
             repr_ += f', compression={self.compression.name}'
 
-        return repr_ + ')'
+        return f'{repr_})'
 
     def _create_complzss_header(self) -> bytes:
         header = bytearray(b'complzss')
